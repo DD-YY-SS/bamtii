@@ -1,4 +1,8 @@
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { resolve } from "node:path";
 import { URL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { badRequest, notFound, readJsonBody, sendBuffer, sendJson, sendText, serverError, withCors } from "./lib/http.js";
 import { logEvent, getLogPaths } from "./lib/logger.js";
 import { findStream, streams } from "./data/streams.js";
@@ -6,6 +10,8 @@ import { decideAbr } from "./services/abrEngine.js";
 import { createBenchmarkChunk } from "./services/benchmarkService.js";
 import { createDemoSegment, createMasterManifest, createVariantManifest } from "./services/hlsService.js";
 import { addTelemetry, getRecentTelemetry, getReport } from "./services/telemetryStore.js";
+
+const videoRoot = fileURLToPath(new URL("../public/videos/", import.meta.url));
 
 export async function handleRequest(req, res) {
   withCors(res);
@@ -39,6 +45,12 @@ export async function handleRequest(req, res) {
         ok: true,
         data: streams
       });
+      return;
+    }
+
+    const mediaVideoMatch = path.match(/^\/media\/videos\/([A-Za-z0-9._-]+)$/);
+    if ((method === "GET" || method === "HEAD") && mediaVideoMatch) {
+      await sendVideoFile(req, res, mediaVideoMatch[1]);
       return;
     }
 
@@ -182,4 +194,67 @@ export async function handleRequest(req, res) {
     await logEvent("error", { message: error instanceof Error ? error.message : String(error) });
     serverError(res);
   }
+}
+
+async function sendVideoFile(req, res, fileName) {
+  const filePath = resolve(videoRoot, fileName);
+  if (!filePath.startsWith(videoRoot)) {
+    notFound(res, "Video not found");
+    return;
+  }
+
+  let fileStat;
+  try {
+    fileStat = await stat(filePath);
+  } catch {
+    notFound(res, "Video not found");
+    return;
+  }
+
+  const range = req.headers.range;
+  const commonHeaders = {
+    "accept-ranges": "bytes",
+    "cache-control": "public, max-age=3600",
+    "content-type": "video/mp4"
+  };
+
+  if (!range) {
+    res.writeHead(200, {
+      ...commonHeaders,
+      "content-length": fileStat.size
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+    createReadStream(filePath).pipe(res);
+    return;
+  }
+
+  const match = range.match(/^bytes=(\d*)-(\d*)$/);
+  if (!match) {
+    res.writeHead(416, { "content-range": `bytes */${fileStat.size}` });
+    res.end();
+    return;
+  }
+
+  const start = match[1] ? Number(match[1]) : 0;
+  const end = match[2] ? Math.min(Number(match[2]), fileStat.size - 1) : fileStat.size - 1;
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= fileStat.size) {
+    res.writeHead(416, { "content-range": `bytes */${fileStat.size}` });
+    res.end();
+    return;
+  }
+
+  res.writeHead(206, {
+    ...commonHeaders,
+    "content-length": end - start + 1,
+    "content-range": `bytes ${start}-${end}/${fileStat.size}`
+  });
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
+  createReadStream(filePath, { start, end }).pipe(res);
 }

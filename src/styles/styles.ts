@@ -574,6 +574,12 @@ export const styles = StyleSheet.create({
     marginTop: 14,
     overflow: "hidden"
   },
+  restoredVideoShell: {
+    backgroundColor: "#0C2422",
+    borderRadius: 22,
+    height: 236,
+    overflow: "hidden"
+  },
   nativeVideo: {
     height: "100%",
     width: "100%"

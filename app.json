@@ -13,9 +13,11 @@
       "**/*"
     ],
     "ios": {
+      "bundleIdentifier": "com.kkakdugi.cutter.mvp",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.kkakdugi.cutter.mvp",
       "adaptiveIcon": {
         "backgroundColor": "#071419"
       },

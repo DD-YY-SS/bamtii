@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, SafeAreaView, ScrollView, StatusBar } from "react-native";
+import { SafeAreaView, ScrollView, StatusBar } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppHeader } from "./src/components/AppHeader";
 import { BottomNav } from "./src/components/BottomNav";
@@ -12,7 +12,7 @@ import { styles } from "./src/styles/styles";
 import type { Delegate, MeasurementResult, NetworkMode, NetworkProfile, Screen, ThrottleMode } from "./src/types/app";
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("youtube");
+  const [screen, setScreen] = useState<Screen>("convert");
   const [networkMode, setNetworkMode] = useState<NetworkMode>("crowd");
   const [aiBoost, setAiBoost] = useState(true);
   const [dataSaver, setDataSaver] = useState(true);
@@ -30,40 +30,9 @@ export default function App() {
   const [isRealtimeMeasuring, setIsRealtimeMeasuring] = useState(false);
   const [measurementError, setMeasurementError] = useState("");
 
-  const scan = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0)).current;
   const measurementInFlight = useRef(false);
 
   const profile = useMemo(() => createRuntimeProfile(networkProfiles[networkMode], measurement), [measurement, networkMode]);
-  const shouldUpscale = aiBoost && (profile.bandwidth <= 2 || profile.serverQuality === "360p");
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(scan, {
-        toValue: 1,
-        duration: shouldUpscale ? 1800 : 2800,
-        easing: Easing.linear,
-        useNativeDriver: true
-      })
-    ).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glow, {
-          toValue: 1,
-          duration: 1200,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true
-        }),
-        Animated.timing(glow, {
-          toValue: 0,
-          duration: 1200,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true
-        })
-      ])
-    ).start();
-  }, [glow, scan, shouldUpscale]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -76,16 +45,6 @@ export default function App() {
 
     return () => clearInterval(timer);
   }, [isPlaying]);
-
-  const scanStyle = {
-    transform: [{ translateX: scan.interpolate({ inputRange: [0, 1], outputRange: [-120, 340] }) }],
-    opacity: scan.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.1, 0.75, 0.1] })
-  };
-
-  const glowStyle = {
-    transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.05] }) }],
-    opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.6] })
-  };
 
   const runMeasurement = useCallback(async () => {
     if (measurementInFlight.current) {
@@ -150,10 +109,7 @@ export default function App() {
               profile={profile}
               selectedContent={selectedContent}
               progress={progress}
-              shouldUpscale={shouldUpscale}
               isPlaying={isPlaying}
-              scanStyle={scanStyle}
-              glowStyle={glowStyle}
               onPlayToggle={() => setIsPlaying((value) => !value)}
               nativeStreamUrl={nativeStreamUrl}
               setNativeStreamUrl={setNativeStreamUrl}

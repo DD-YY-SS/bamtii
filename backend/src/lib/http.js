@@ -84,6 +84,7 @@ export async function readJsonBody(req, maxBytes = 1024 * 64) {
 export function withCors(res) {
   res.setHeader("access-control-allow-origin", "*");
   res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
-  res.setHeader("access-control-allow-headers", "content-type,authorization");
+  res.setHeader("access-control-allow-headers", "content-type,authorization,range");
+  res.setHeader("access-control-expose-headers", "content-length,content-range,accept-ranges");
   res.setHeader("access-control-max-age", "86400");
 }

@@ -1,33 +1,27 @@
 import { useMemo } from "react";
 import { Text, TextInput, View } from "react-native";
 import WebView from "react-native-webview/lib/WebView";
-import { contentList } from "../constants/appData";
 import { styles } from "../styles/styles";
 
 export function NativeStreamPlayer({
-  apiBaseUrl,
   streamUrl,
   setStreamUrl,
-  selectedContent
+  defaultStreamUrl,
+  sourceLabel,
+  paused
 }: {
-  apiBaseUrl: string;
   streamUrl: string;
   setStreamUrl: (value: string) => void;
-  selectedContent: number;
+  defaultStreamUrl: string;
+  sourceLabel: string;
   paused: boolean;
 }) {
-  const defaultStreamUrl = useMemo(() => {
-    const streamId = contentList[selectedContent].id;
-    const base = apiBaseUrl.trim().replace(/\/$/, "");
-    return `${base}/api/streams/${streamId}/master.m3u8?bandwidthMbps=1.4&latencyMs=72&packetDropPercent=5&jitterMs=16`;
-  }, [apiBaseUrl, selectedContent]);
-
-  const effectiveUrl = streamUrl.trim() || defaultStreamUrl;
+  const effectiveUrl = useMemo(() => (streamUrl ?? "").trim() || defaultStreamUrl, [defaultStreamUrl, streamUrl]);
 
   return (
     <View>
       <Text style={styles.panelText}>
-        자체 HLS/MP4 360p 영상을 입력해 재생합니다. iOS 발표 빌드 안정성을 위해 네이티브 비디오 모듈 대신 WebView video 플레이어를 사용합니다.
+        상단 입력은 실제 360p 샘플 스트림입니다. URL을 바꾸면 아래 복원 출력도 같은 영상을 즉시 사용합니다.
       </Text>
       <TextInput
         value={streamUrl}
@@ -41,28 +35,30 @@ export function NativeStreamPlayer({
       />
       <View style={styles.nativeVideoShell}>
         <WebView
+          key={`${effectiveUrl}-${paused ? "paused" : "playing"}`}
           originWhitelist={["*"]}
           allowsFullscreenVideo
           allowsInlineMediaPlayback
           javaScriptEnabled
           mediaPlaybackRequiresUserAction={false}
-          source={{ html: createVideoHtml(effectiveUrl) }}
+          source={{ html: createVideoHtml(effectiveUrl, sourceLabel, paused) }}
           style={styles.nativeVideo}
         />
       </View>
       <View style={styles.measurementBox}>
-        <Text style={styles.measurementTitle}>AI 복원 파이프라인 연결 지점</Text>
+        <Text style={styles.measurementTitle}>입력 소스: {sourceLabel}</Text>
         <Text style={styles.panelText}>
-          현재 화면은 360p 스트림 수신과 복원 출력 흐름을 시연합니다. 실제 실시간 복원은 iOS Core ML Native Module에서 decoded frame을 받아 처리하는
-          단계로 확장합니다.
+          현재 URL의 프레임을 아래 720p+ 캔버스 복원 파이프라인으로 전달합니다.
         </Text>
       </View>
     </View>
   );
 }
 
-function createVideoHtml(videoUrl: string) {
-  const escapedUrl = videoUrl.replace(/"/g, "&quot;");
+function createVideoHtml(videoUrl: string, sourceLabel: string, paused: boolean) {
+  const escapedUrl = escapeHtmlAttribute(videoUrl);
+  const escapedLabel = escapeHtml(sourceLabel);
+  const autoplay = paused ? "" : "autoplay";
 
   return `
 <!doctype html>
@@ -103,13 +99,44 @@ function createVideoHtml(videoUrl: string) {
         color: #08231F;
         font: 800 12px -apple-system, BlinkMacSystemFont, sans-serif;
       }
+      .source {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        max-width: calc(100% - 24px);
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(8,35,31,0.74);
+        color: #E9FFF4;
+        font: 800 12px -apple-system, BlinkMacSystemFont, sans-serif;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <video src="${escapedUrl}" controls playsinline webkit-playsinline preload="metadata"></video>
-      <div class="badge">360p 수신 · AI 복원 준비</div>
+      <video id="source" src="${escapedUrl}" controls muted loop ${autoplay} playsinline webkit-playsinline crossorigin="anonymous" preload="auto"></video>
+      <div class="badge">360p 입력</div>
+      <div class="source">${escapedLabel}</div>
     </div>
+    <script>
+      const source = document.getElementById("source");
+      ${paused ? "source.pause();" : "source.play().catch(() => {});"}
+    </script>
   </body>
 </html>`;
+}
+
+function escapeHtmlAttribute(value: string) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function escapeHtml(value: string) {
+  return escapeHtmlAttribute(value).replace(/'/g, "&#39;");
 }

@@ -1,20 +1,19 @@
+import { useMemo } from "react";
 import { Text, View } from "react-native";
-import { HeroPlayer } from "../components/HeroPlayer";
 import { NativeStreamPlayer } from "../components/NativeStreamPlayer";
 import { Panel } from "../components/Panel";
 import { PipelineItem } from "../components/PipelineItem";
+import { RealtimeUpscalePlayer } from "../components/RealtimeUpscalePlayer";
 import { contentList } from "../constants/appData";
+import { sample360pVideos } from "../constants/sampleVideos";
 import { styles } from "../styles/styles";
-import type { AnimatedStyle, MeasurementResult, NetworkProfile } from "../types/app";
+import type { MeasurementResult, NetworkProfile } from "../types/app";
 
 type VideoConvertScreenProps = {
   profile: NetworkProfile;
   selectedContent: number;
   progress: number;
-  shouldUpscale: boolean;
   isPlaying: boolean;
-  scanStyle: AnimatedStyle;
-  glowStyle: AnimatedStyle;
   onPlayToggle: () => void;
   nativeStreamUrl: string;
   setNativeStreamUrl: (value: string) => void;
@@ -29,10 +28,7 @@ export function VideoConvertScreen({
   profile,
   selectedContent,
   progress,
-  shouldUpscale,
   isPlaying,
-  scanStyle,
-  glowStyle,
   onPlayToggle,
   nativeStreamUrl,
   setNativeStreamUrl,
@@ -47,43 +43,53 @@ export function VideoConvertScreen({
     serverQuality: "360p",
     renderQuality: "720p+",
     trafficSaved: Math.max(profile.trafficSaved, 62),
-    inference: profile.inference || 27,
-    fps: Math.max(profile.fps, 34)
+    inference: 42,
+    fps: 24
   };
+  const defaultSample = useMemo(() => sample360pVideos[Math.floor(Math.random() * sample360pVideos.length)] ?? sample360pVideos[0], []);
+  const apiRoot = (apiBaseUrl ?? "http://127.0.0.1:4000").trim().replace(/\/$/, "");
+  const customStreamUrl = (nativeStreamUrl ?? "").trim();
+  const defaultSampleUrl = `${apiRoot}/media/videos/${defaultSample.fileName}`;
+  const defaultRestoredUrl = `${apiRoot}/media/videos/${defaultSample.restoredFileName}`;
+  const sourceTitle = customStreamUrl ? "사용자 입력 360p URL" : defaultSample.title;
 
   return (
     <View style={styles.section}>
       <Panel title="원본 360p 영상">
         <Text style={styles.panelText}>
-          사용자가 입력한 자체 HLS/MP4 360p 영상을 원본 화질 그대로 재생합니다. 이 영역은 서버에서 받은 저해상도 스트림을 보여줍니다.
+          구글 검색으로 찾은 공개 테스트용 360p MP4를 로컬 백엔드에 다운로드해 재생합니다. 이 상단 화면은 복원 전 저품질 입력입니다.
         </Text>
-        <NativeStreamPlayer apiBaseUrl={apiBaseUrl} streamUrl={nativeStreamUrl} setStreamUrl={setNativeStreamUrl} selectedContent={selectedContent} paused={!isPlaying} />
+        <NativeStreamPlayer
+          streamUrl={nativeStreamUrl}
+          setStreamUrl={setNativeStreamUrl}
+          defaultStreamUrl={defaultSampleUrl}
+          sourceLabel={customStreamUrl ? sourceTitle : defaultSample.source}
+          paused={!isPlaying}
+        />
         <MeasurementButton isMeasuring={isMeasuring} onMeasure={onMeasure} label="360p 스트림 실측" loadingLabel="스트림 실측 중..." />
         <MeasurementResult measurement={measurement} measurementError={measurementError} />
       </Panel>
 
-      <Panel title="Demo 복원 출력">
+      <Panel title={`${contentList[selectedContent].title} 360p → 720p+`}>
         <Text style={styles.panelText}>
-          아래 화면은 360p 입력을 온디바이스 AI로 720p+ 출력하는 복원 결과를 시각화한 시연 영역입니다. 실제 제품 단계에서는 iOS Core ML Native
-          Module이 프레임 단위로 처리합니다.
+          아래 출력은 상단 360p 파일을 FSRCNN-x smoke 모델로 프레임 처리해 생성한 720p 복원 영상입니다.
         </Text>
-        <HeroPlayer
-          title={`${contentList[selectedContent].title} · 360p → 720p+`}
+        <RealtimeUpscalePlayer
+          streamUrl={nativeStreamUrl}
+          defaultStreamUrl={defaultSampleUrl}
+          restoredStreamUrl={customStreamUrl ? "" : defaultRestoredUrl}
+          sourceTitle={sourceTitle}
           profile={demoProfile}
           progress={progress}
-          shouldUpscale={shouldUpscale}
-          effectiveQuality="720p+"
           isPlaying={isPlaying}
-          scanStyle={scanStyle}
-          glowStyle={glowStyle}
           onPlayToggle={onPlayToggle}
         />
       </Panel>
 
       <Panel title="변환 파이프라인">
-        <PipelineItem label="입력" value="360p 자체 HLS/MP4 영상" />
-        <PipelineItem label="전송" value="저해상도 패킷만 수신" />
-        <PipelineItem label="복원" value="FSRCNN/Core ML 기반 720p+ 변환 구조" />
+        <PipelineItem label="입력" value={`${sourceTitle} · 640x360`} />
+        <PipelineItem label="전송" value="로컬 백엔드에서 360p MP4 Range 스트리밍" />
+        <PipelineItem label="복원" value="FSRCNN-x smoke 모델 360p→720p 프레임 처리" />
         <PipelineItem label="출력" value={`절감률 ${demoProfile.trafficSaved}% · 목표 ${demoProfile.fps}FPS`} />
       </Panel>
     </View>
