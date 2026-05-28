@@ -114,7 +114,7 @@ export function VideoConvertScreen({
 
       <Panel title={`${contentList[selectedContent].title} 360p → 720p+`}>
         <Text style={styles.panelText}>
-          Demo 복원 출력은 360p 입력을 고화질 출력으로 바꾸는 시연 영역입니다. 현재는 발표 안정성을 위해 같은 샘플의 720p 기준 영상을 재생하고, 실제 Native SR 파이프라인은 이 자리에 연결합니다.
+          Demo 복원 출력은 360p 입력을 고화질 출력으로 바꾸는 목표 화면입니다. 발표 안정성을 위해 같은 샘플의 720p 기준 영상을 재생하고, 실제 Native SR 파이프라인은 이 자리에 연결합니다.
         </Text>
         <RealtimeUpscalePlayer
           streamUrl={nativeStreamUrl}
