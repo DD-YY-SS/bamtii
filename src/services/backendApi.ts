@@ -1,4 +1,4 @@
-import type { MeasurementResult, ThrottleMode } from "../types/app";
+import type { MeasurementResult, SavingsReport, ThrottleMode } from "../types/app";
 
 type TelemetryDecisionResponse = {
   ok: boolean;
@@ -102,6 +102,77 @@ export async function measureNetworkAndSendTelemetry({
     backendTrafficSavedPercent: telemetry.data.decision.trafficSavedPercent,
     backendInferenceMs: telemetry.data.decision.estimatedInferenceMs
   };
+}
+
+export async function fetchSavingsReport({
+  apiBaseUrl,
+  sourceFileName,
+  restoredFileName
+}: {
+  apiBaseUrl: string;
+  sourceFileName: string;
+  restoredFileName: string;
+}): Promise<SavingsReport> {
+  const baseUrl = normalizeBaseUrl(apiBaseUrl);
+  const query = new URLSearchParams({
+    source: sourceFileName,
+    restored: restoredFileName
+  });
+  const response = await fetch(`${baseUrl}/api/media/savings-report?${query.toString()}`);
+
+  if (response.ok) {
+    const payload = (await response.json()) as { ok: boolean; data: SavingsReport };
+    return payload.data;
+  }
+
+  return fetchSavingsReportFromVideoHeaders({
+    baseUrl,
+    sourceFileName,
+    restoredFileName
+  });
+}
+
+async function fetchSavingsReportFromVideoHeaders({
+  baseUrl,
+  sourceFileName,
+  restoredFileName
+}: {
+  baseUrl: string;
+  sourceFileName: string;
+  restoredFileName: string;
+}): Promise<SavingsReport> {
+  const sourceBytes = await fetchContentLength(`${baseUrl}/media/videos/${sourceFileName}`);
+  const restoredBytes = await fetchContentLength(`${baseUrl}/media/videos/${restoredFileName}`);
+  const savedBytes = Math.max(restoredBytes - sourceBytes, 0);
+  const trafficSavedPercent = restoredBytes > 0 ? round((savedBytes / restoredBytes) * 100, 1) : 0;
+
+  return {
+    measuredAt: new Date().toISOString(),
+    sourceFileName,
+    restoredFileName,
+    sourceBytes,
+    restoredBytes,
+    savedBytes,
+    trafficSavedPercent,
+    sourceMbpsAt30Fps: estimateBitrateMbps(sourceBytes, 12.2),
+    restoredMbpsAt30Fps: estimateBitrateMbps(restoredBytes, 12.2)
+  };
+}
+
+async function fetchContentLength(url: string) {
+  const response = await fetch(url, { method: "HEAD" });
+  if (!response.ok) {
+    throw new Error("절감 리포트를 불러오지 못했습니다. 백엔드 서버와 영상 파일을 확인해주세요.");
+  }
+  const contentLength = Number(response.headers.get("content-length") ?? 0);
+  if (!Number.isFinite(contentLength) || contentLength <= 0) {
+    throw new Error("영상 파일 크기를 실측하지 못했습니다. 백엔드 Content-Length 응답을 확인해주세요.");
+  }
+  return contentLength;
+}
+
+function estimateBitrateMbps(bytes: number, durationSeconds: number) {
+  return round((bytes * 8) / durationSeconds / 1_000_000, 2);
 }
 
 function applyThrottle(

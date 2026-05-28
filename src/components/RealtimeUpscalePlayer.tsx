@@ -140,10 +140,10 @@ function createModelOutputHtml(videoUrl: string, _sourceTitle: string, paused: b
     <div class="stage">
       <video id="restored" src="${escapedUrl}" muted loop ${autoplay} playsinline webkit-playsinline crossorigin="anonymous" preload="auto"></video>
       <div class="scan"></div>
-      <div class="badge">720p FSRCNN 모델 출력</div>
+      <div class="badge">720p 기준 출력</div>
       <div class="status">
         <span class="dot"></span>
-        <span class="statusText">smoke best.pth → MP4 복원 결과</span>
+        <span class="statusText">360p 입력 대비 고화질 출력 비교</span>
       </div>
     </div>
     <script>

@@ -7,9 +7,9 @@ export type SampleVideo = {
 
 export const sample360pVideos: SampleVideo[] = [
   {
-    title: "Downloaded 360p Seawater",
-    fileName: "samplecat-360p.mp4",
-    restoredFileName: "samplecat-720p-fsrcnn-smoke.mp4",
-    source: "Sample.Cat SD 640x360 MP4"
+    title: "Seawater Drone Demo",
+    fileName: "seawater-360p.mp4",
+    restoredFileName: "seawater-720p-fsrcnn-epoch10.mp4",
+    source: "Sample.Cat 640x360 MP4 · FSRCNN x2 epoch10"
   }
 ];

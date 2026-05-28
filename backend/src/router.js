@@ -54,6 +54,22 @@ export async function handleRequest(req, res) {
       return;
     }
 
+    if (method === "GET" && path === "/api/media/savings-report") {
+      const report = await createSavingsReport({
+        sourceFileName: url.searchParams.get("source") ?? "",
+        restoredFileName: url.searchParams.get("restored") ?? ""
+      });
+      if (!report) {
+        notFound(res, "Video report source not found");
+        return;
+      }
+      sendJson(res, 200, {
+        ok: true,
+        data: report
+      });
+      return;
+    }
+
     if (method === "GET" && path === "/api/benchmark/chunk") {
       const chunk = createBenchmarkChunk(url.searchParams.get("sizeKb") ?? 256);
       sendBuffer(res, 200, chunk.buffer, "application/octet-stream", {
@@ -257,4 +273,51 @@ async function sendVideoFile(req, res, fileName) {
     return;
   }
   createReadStream(filePath, { start, end }).pipe(res);
+}
+
+async function createSavingsReport({ sourceFileName, restoredFileName }) {
+  if (!isSafeVideoName(sourceFileName) || !isSafeVideoName(restoredFileName)) {
+    return null;
+  }
+
+  const sourcePath = resolve(videoRoot, sourceFileName);
+  const restoredPath = resolve(videoRoot, restoredFileName);
+
+  if (!sourcePath.startsWith(videoRoot) || !restoredPath.startsWith(videoRoot)) {
+    return null;
+  }
+
+  let sourceStat;
+  let restoredStat;
+  try {
+    sourceStat = await stat(sourcePath);
+    restoredStat = await stat(restoredPath);
+  } catch {
+    return null;
+  }
+
+  const sourceBytes = sourceStat.size;
+  const restoredBytes = restoredStat.size;
+  const savedBytes = Math.max(restoredBytes - sourceBytes, 0);
+  const trafficSavedPercent = restoredBytes > 0 ? Math.round((savedBytes / restoredBytes) * 1000) / 10 : 0;
+
+  return {
+    measuredAt: new Date().toISOString(),
+    sourceFileName,
+    restoredFileName,
+    sourceBytes,
+    restoredBytes,
+    savedBytes,
+    trafficSavedPercent,
+    sourceMbpsAt30Fps: estimateBitrateMbps(sourceBytes, 12.2),
+    restoredMbpsAt30Fps: estimateBitrateMbps(restoredBytes, 12.2)
+  };
+}
+
+function isSafeVideoName(fileName) {
+  return /^[A-Za-z0-9._-]+\.mp4$/.test(fileName);
+}
+
+function estimateBitrateMbps(bytes, durationSeconds) {
+  return Math.round(((bytes * 8) / durationSeconds / 1_000_000) * 100) / 100;
 }

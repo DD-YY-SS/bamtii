@@ -37,6 +37,18 @@ export type MeasurementResult = {
   backendInferenceMs?: number;
 };
 
+export type SavingsReport = {
+  measuredAt: string;
+  sourceFileName: string;
+  restoredFileName: string;
+  sourceBytes: number;
+  restoredBytes: number;
+  savedBytes: number;
+  trafficSavedPercent: number;
+  sourceMbpsAt30Fps: number;
+  restoredMbpsAt30Fps: number;
+};
+
 export type ContentItem = {
   id: string;
   title: string;

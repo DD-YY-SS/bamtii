@@ -47,9 +47,7 @@ export function NativeStreamPlayer({
       </View>
       <View style={styles.measurementBox}>
         <Text style={styles.measurementTitle}>입력 소스: {sourceLabel}</Text>
-        <Text style={styles.panelText}>
-          현재 URL의 프레임을 아래 720p+ 캔버스 복원 파이프라인으로 전달합니다.
-        </Text>
+        <Text style={styles.panelText}>현재 URL의 프레임을 아래 720p+ 캔버스 복원 파이프라인으로 전달합니다.</Text>
       </View>
     </View>
   );
