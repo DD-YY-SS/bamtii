@@ -1,0 +1,31 @@
+{
+  "name": "kkakdugi-cutter-mvp",
+  "version": "1.0.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "prebuild": "expo prebuild",
+    "dev:android": "expo run:android",
+    "dev:ios": "expo run:ios",
+    "backend": "npm --prefix backend start",
+    "backend:dev": "npm --prefix backend run dev",
+    "backend:test": "npm --prefix backend test"
+  },
+  "dependencies": {
+    "expo": "~54.0.0",
+    "expo-dev-client": "^55.0.33",
+    "expo-linear-gradient": "~15.0.0",
+    "react": "19.1.0",
+    "react-native": "0.81.0",
+    "react-native-webview": "^13.16.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "babel-preset-expo": "^55.0.21",
+    "typescript": "~5.9.2"
+  }
+}
