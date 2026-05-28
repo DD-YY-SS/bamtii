@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "깍두기 절단기 MVP",
+    "slug": "kkakdugi-cutter-mvp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-dev-client"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.kkakdugi.cutter.mvp",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.kkakdugi.cutter.mvp",
+      "adaptiveIcon": {
+        "backgroundColor": "#071419"
+      },
+      "edgeToEdgeEnabled": true
+    }
+  }
+}
